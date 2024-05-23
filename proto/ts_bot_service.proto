@@ -4,22 +4,31 @@ package grpc_pb;
 option go_package = "github.com/PaoloEG/terrasense/grpc_pb";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 // Interface exported by the server.
-service TerraSenseService {
+service TerraSenseBotService {
+  rpc PairSensor(PairingRequest) returns (google.protobuf.Empty) {}
+  rpc PairedSensors(PairedSensorsRequest) returns (PairedSensorsResponse){}
+
   rpc GetLatestMeasurement(LatestMeasurementSearch) returns (Measurement) {}
-  rpc GetMeasurements(MeasurementSearch) returns (Measurements) {}
+}
+
+message PairingRequest {
+  string userID = 1;
+  string chipID = 2;
+}
+
+message PairedSensorsRequest {
+  string userID = 1;
+}
+
+message PairedSensorsResponse {
+  repeated string chipID = 1;
 }
 
 message LatestMeasurementSearch {
   string chipID = 1;
-}
-
-message MeasurementSearch {
-  string chipID = 1;
-  int32  count = 2;
-  google.protobuf.Timestamp from = 3;
-  google.protobuf.Timestamp to = 4;
 }
 
 message Measurement {
@@ -29,10 +38,5 @@ message Measurement {
   float humidity = 5;
   float pressure = 6;
   float altitude = 7;
-}
-
-message Measurements {
-  int32 chipID = 1; 
-  repeated Measurement measurement = 2;
 }
 
