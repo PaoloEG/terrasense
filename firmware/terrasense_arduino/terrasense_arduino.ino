@@ -14,6 +14,8 @@
 #define SAMPLING_SIZE 100
 #define SLEEP_TIME 3.6e9 // 1h //3e8; //5 min
 
+int chipID = ESP.getChipId();
+String pubTopic = String(String("terrasense/")+chipID+String("/measurements"));
 float soilMoistureValue(NAN);
 float temp(NAN), hum(NAN), pres(NAN);
 BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
@@ -35,7 +37,7 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if (client.connect(MODEL_VERSION, MQTT_USERNAME, MQTT_PASSWORD)) {
+    if (client.connect(String(chipID).c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
       Serial.println("connected");
 
       client.subscribe("led_state");   // subscribe the topics here
@@ -51,7 +53,7 @@ void reconnect() {
 
 pb_Measurements createMeasurement(float soil, float temp, float pres, float hum){
   pb_Measurements m = pb_Measurements_init_zero;
-  m.chipID = ESP.getChipId();
+  m.chipID = chipID;
   m.soilMoisture = soil;
   m.temperature = temp;
   m.pressure = pres;
@@ -86,7 +88,6 @@ void setup() {
 
   while (!bme.begin()) {
     Serial.println("Could not find BME280 sensor!");
-    delay(1000);
   }
   wifiManager.autoConnect("TerraSense_AP");
 
@@ -96,19 +97,20 @@ void setup() {
 
 //////////////////////////////////////////////////////////////////
 void loop() {
+  delay(100);
   Serial.println("Entering the loop");
   if (!client.connected()) reconnect();
   int sum = 0;
   for(int i=0; i<SAMPLING_SIZE; i++){
     sum += analogRead(A0);
-    delay(2);
+    delay(10);
   }
   soilMoistureValue = sum/SAMPLING_SIZE;
   bme.read(pres, temp, hum, tempUnit, presUnit);
   Serial.println("create measurement");
   pb_Measurements measurements = createMeasurement(soilMoistureValue, temp, pres, hum);
-  sendMeasurement(PUB_TOPIC, measurements, false);
+  sendMeasurement(pubTopic.c_str(), measurements, false);
   Serial.println("now let's take a nap...");
   // ESP.deepSleep(SLEEP_TIME); //deep sleep
-  delay(SLEEP_TIME); //delay - in case of powerbank connection
+  delay(4e6); //delay - in case of powerbank connection - 2 hours
 }
